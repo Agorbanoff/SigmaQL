@@ -1,8 +1,8 @@
 # SigmaQL
 
-SigmaQL is a lightweight, expressive, JSON-driven query engine inspired by GraphQL — but intentionally simpler, faster, and easier to integrate into any backend.
+SigmaQL is a lightweight, expressive, JSON-driven query engine inspired by GraphQL — but intentionally simpler, faster, and easier to integrate into backend systems.
 
-SigmaQL exposes a single `/query` endpoint that accepts structured JSON describing what data the client wants. The backend parses the request, validates it, compiles it into SQL, executes it safely, and returns clean nested JSON.
+Built with **Spring Boot**, SigmaQL exposes a single `/query` endpoint that accepts structured JSON describing what data the client wants. The backend parses the request, validates it, compiles it into SQL, executes it safely, and returns clean nested JSON.
 
 ---
 
@@ -10,11 +10,12 @@ SigmaQL exposes a single `/query` endpoint that accepts structured JSON describi
 
 - **Single endpoint architecture** (`POST /query`)
 - **Custom JSON query language**
-- **Dynamic SQL generation (safe prepared statements)**
+- **Dynamic SQL generation (PreparedStatement-safe)**
+- **AST-based query parsing**
 - **Nested relations (`include`)**
 - **Filter operators:** `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`, `between`
-- **Schema registry for validation**
-- **Fully extensible design** (sorting, pagination, aggregations, permissions, caching)
+- **Schema registry (entity → fields → relations)**
+- **Extendable modular architecture** (sorting, pagination, aggregations, permissions, caching)
 
 ---
 
@@ -64,17 +65,17 @@ SigmaQL exposes a single `/query` endpoint that accepts structured JSON describi
 
 # 🧠 How SigmaQL Works
 
-SigmaQL processes all queries through five stages:
+SigmaQL processes every request through five stages:
 
-### **1. Validate**
-The query is checked against the internal Schema Registry:
-- valid entity  
-- valid fields  
-- valid filters  
-- valid relations  
+### **1. Validation**
+The query is validated against the Schema Registry:
+- entity exists  
+- fields exist  
+- operators are legal  
+- relations are valid  
 
 ### **2. Parse → AST**
-The JSON request becomes an **Abstract Syntax Tree**:
+The JSON query is transformed into a structured **Abstract Syntax Tree**:
 
 ```
 QueryAST
@@ -84,22 +85,25 @@ QueryAST
  └── include
 ```
 
-### **3. Compile to SQL**
-The AST is translated into a secure SQL query.
+### **3. SQL Compilation**
+The AST is translated into SQL using a custom SQL builder.
 
 Example:
 
 ```sql
-SELECT id, username, email
-FROM users
-WHERE age > $1;
+SELECT id, username, email 
+FROM users 
+WHERE age > ?;
 ```
 
-### **4. Execute**
-Prepared SQL is executed through the database driver.
+### **4. Execution (Spring JDBC / JPA / Query Builder)**
+Queries are executed safely using:
+- JDBC PreparedStatement, **or**
+- Spring Data JDBC, **or**
+- NamedParameterJdbcTemplate
 
-### **5. Resolve → JSON**
-Rows are transformed into clean nested JSON according to the query structure.
+### **5. JSON Response Resolution**
+SQL results are transformed into nested JSON matching the structure of the query.
 
 ---
 
@@ -123,7 +127,7 @@ Rows are transformed into clean nested JSON according to the query structure.
 
 ---
 
-# 🚀 Getting Started
+# 🚀 Getting Started (Spring Boot)
 
 ### **1. Clone the repo**
 ```bash
@@ -131,36 +135,22 @@ git clone https://github.com/Agorbanoff/SigmaQL.git
 cd SigmaQL
 ```
 
-### **2. Install dependencies**
-FastAPI example:
-```bash
-pip install -r requirements.txt
-```
-
-Spring Boot example:
+### **2. Build the project**
 ```bash
 mvn clean install
 ```
 
-### **3. Configure environment**
-Create `.env`:
+### **3. Configure environment variables**
+In `application.properties`:
 
-```
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgres
-DB_PASS=password
-DB_NAME=sigmaql
-```
-
-### **4. Run the server**
-
-FastAPI:
-```bash
-uvicorn app.main:app --reload
+```properties
+spring.datasource.url=jdbc:postgresql://localhost:5432/sigmaql
+spring.datasource.username=postgres
+spring.datasource.password=password
+spring.datasource.driver-class-name=org.postgresql.Driver
 ```
 
-Spring Boot:
+### **4. Run the backend**
 ```bash
 mvn spring-boot:run
 ```
@@ -170,22 +160,23 @@ mvn spring-boot:run
 # 🧪 Test an Example Query
 
 ```bash
-curl -X POST http://localhost:8000/query \
+curl -X POST http://localhost:8080/query \
   -H "Content-Type: application/json" \
   -d '{"entity": "users", "fields": ["id"]}'
 ```
 
 ---
 
-# 🧱 Roadmap
+# 🧱 Project Roadmap
 
 - [ ] Sorting (`orderBy`)
 - [ ] Pagination (`limit`, `offset`)
 - [ ] Field aliases
 - [ ] Aggregations (`count`, `sum`, `avg`, `max`, `min`)
-- [ ] Role-based permissions
-- [ ] Cache layer for repeated queries
-- [ ] Relation-depth limits
+- [ ] Permission and role-based field visibility
+- [ ] Caching of repeated queries
+- [ ] Join optimizations
+- [ ] Relation depth limits
 - [ ] Custom operator plugins
 
 ---
@@ -206,11 +197,5 @@ curl -X POST http://localhost:8000/query \
 
 # 🤝 Contributing
 
-PRs and ideas are welcome.  
-This project is intended for learning backend architecture and building a custom query language.
-
----
-
-# 📜 License
-
-MIT License.
+Pull requests and ideas are welcome.  
+SigmaQL is designed as an educational project demonstrating architecture-level backend design, query parsing, and dynamic SQL compilation.
