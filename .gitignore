@@ -35,3 +35,11 @@ build/
 
 pom.xml
 target
+
+# ignore C/CMake stuff
+*.c
+*.h
+C/
+test/
+CMakeLists.txt
+cmake-build-*/
